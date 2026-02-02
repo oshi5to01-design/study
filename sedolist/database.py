@@ -89,15 +89,31 @@ class DatabaseManager:
         """初期化:コネクションプールの作成とマイグレーション"""
 
         # sessionテーブルのスキーマ確認
+        # データベースの接続センター(engine)に対して、調査員(inspector)が構造を調査する
         inspector = inspect(engine)
+
+        # sessionsという名前のテーブルが、
+        # 実際にデータベースの中に存在するかどうかinspectorに確認させる
         if inspector.has_table("sessions"):
+            # sessionsテーブルにあるすべてのカラムの情報を取ってきて、
+            # その中からnameだけを抜き出してリストにまとめる
             columns = [c["name"] for c in inspector.get_columns("sessions")]
+
             # 旧カラム(session_id)があり、新カラム(session_hash)がない場合は再作成
+            # データベースの構造をチェックして、古い項目のままで、
+            # 新しい項目がまだ作られていないという状態だったら
+            # 自動的にテーブルのリフォーム(マイグレーション)をすることにする
             if "session_id" in columns and "session_hash" not in columns:
                 print("sessionテーブルのマイグレーションを実行します")
+                # ワンチャンミスるかも
                 try:
+                    # ORMを通さず、データベース接続センター(engine)から直接生の回線を１本借りてくる
+                    # 終わったら勝手にリソース解放(with)
                     with engine.connect() as conn:
+                        # sessionsテーブルを中身もろとも消せという命令
+                        # ここはSQLAlchemy使わず生のSQL
                         conn.execute(text("DROP TABLE sessions CASCADE"))
+                        # 削除を確定
                         conn.commit()
                 except Exception as e:
                     print(f"マイグレーション中にエラーが発生しました: {e}")
