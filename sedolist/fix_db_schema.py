@@ -17,7 +17,7 @@ def fix_schema():
     # engineから作業用の直通回線を１本借りてくる
     with engine.connect() as conn:
         # コンソールに今からsessionsテーブルを解体すると表示
-        print("Dropping sessions table...")
+        print("sessionsテーブルを削除しています..")
 
         # DROP TABLE：テーブルを中身のデータもろとも削除する
         # IF EXISTS：テーブルがあるなら消す、ないならなにもしない
@@ -25,13 +25,13 @@ def fix_schema():
         conn.execute(text("DROP TABLE IF EXISTS sessions CASCADE"))
 
         # 消すけど、次アプリ起動時新しく作り直すと表示
-        print("Creating sessions table (via next app run)...")
+        print("次回のアプリ起動時に、sessionsテーブルが再作成されます...")
 
         # app.pyでBase.metadata.create_all()を呼び出すことでテーブルが再作成される
         # テーブル消去を確定
         conn.commit()
-    # ドーン！！完了！
-    print("Done.")
+
+    print("完了！")
 
 
 if __name__ == "__main__":

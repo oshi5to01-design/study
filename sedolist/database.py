@@ -28,10 +28,17 @@ load_dotenv()
 # データベースURLの構築
 DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 # データベースエンジンの作成
+# データベース接続センターを作る
+# 常設の回線が10本、混雑時には追加で20本繋げていいよ
 engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20)
 # セッションファクトリーの作成
+# autocommit=False：db.commitをするまで変更の確定はさせない、ロールバックができる
+# autoflush=False：準備ができたら自分からデータを送るから勝手に送らないで
+# autoflush=Trueだとquery(検索)のたびにSQLAlchemyが下書きを送ってしまう
+# bind=engine：接続先の指定、engineに繋ぐ
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # 親クラス
+# SQLAlchemyの機能でこのクラスを継承すれば自動的にデータベースのテーブルになれるというクラスを作る
 BASE: Any = declarative_base()
 
 
@@ -119,6 +126,11 @@ class DatabaseManager:
                     print(f"マイグレーション中にエラーが発生しました: {e}")
 
         # テーブルの作成
+        # BASE(設計図)に登録されているすべてのテーブルを、
+        # engine(指定の場所)に作成する指示
+        # 実行するたびデータベースの中身を確認し、存在しないテーブルだけ作成してくれる
+        # 作るテーブルが既に作られている場合はなにもしない
+        # 何度実行しても、最終的にはすべてのテーブルが揃っている状態になる(べき等性)
         BASE.metadata.create_all(bind=engine)
 
     def get_db(self):
