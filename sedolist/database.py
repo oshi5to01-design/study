@@ -133,8 +133,11 @@ class DatabaseManager:
         # 何度実行しても、最終的にはすべてのテーブルが揃っている状態になる(べき等性)
         BASE.metadata.create_all(bind=engine)
 
+    # データベースの窓口をgetする関数
     def get_db(self):
         """セッションを作成して返す"""
+        # 前に作ったSessionLocal(窓口の設計図)を実行して、窓口を一つ作って呼び出し元に渡す
+        # あちこちにSessionLocal()と書かなくてよくなる(カプセル化)
         return SessionLocal()
 
     #
@@ -144,17 +147,25 @@ class DatabaseManager:
         self, user_id: int, session_hash: str, expires_at: datetime
     ) -> None:
         """新しいセッションを登録する"""
+        # get_dbを呼び出して窓口を一つ確保する
         db = self.get_db()
         try:
+            # SessionModelテーブルに、誰の(useer_id)、合言葉は(session_hash)、
+            # 有効期限は(expires_at)という情報を仮記入し、ew_sessionに代入
             new_session = SessionModel(
                 user_id=user_id,
                 session_hash=session_hash,
                 expires_at=expires_at,
             )
+            # その情報をDBに保存するよう予約
             db.add(new_session)
+            # DBの保存を確定させる
             db.commit()
+        # もし、失敗したら
         except Exception as e:
+            # 変更を破棄し、元の状態に戻す
             db.rollback()
+            # エラーの報告とエラー内容の表示
             print(f"セッションの作成中にエラーが発生しました: {e}")
         finally:
             db.close()
