@@ -172,35 +172,71 @@ class DatabaseManager:
 
     def get_user_by_session(self, session_hash: str) -> tuple[int, str] | None:
         """セッションからユーザーIDとユーザー名を取得する"""
+
+        # get_dbを呼び出して通信の窓口を一つ確保する
         db = self.get_db()
+
+        # データベースに問い合わせ(外への通信)をするから
+        # ワンチャンネットが切れてたりDBが眠ってるかもしれないというときの備え
         try:
             # セッションを検索
             session = (
+                # SessionModelテーブルを調べておくれ
                 db.query(SessionModel)
+                # 条件にマッチするか調べる
                 .filter(
-                    SessionModel.session.hash == session_hash,
+                    # 記録されている合言葉(hash)と、今ユーザーが提示してきた合言葉が一致するか
+                    SessionModel.session_hash == session_hash,
+                    # かつ、合言葉の有効期限(expires_at)が、今現在の時刻より未来になっているか
+                    # 今より前なら期限切れ
                     SessionModel.expires_at > datetime.now(),
                 )
+                # 条件にマッチするデータを見つけたら最初の1件だけ取り出してsessionという変数に入れてね
                 .first()
             )
 
+            # もしさっきのセッション（合言葉の一致と有効期限の確認）がTrueなら
             if session:
                 user = (
+                    # UserModelテーブルを調べる
+                    # UserModelテーブルのidと今入ってきたユーザーのidが一致するか確認
+                    # マッチする最初の一人を見つけて、userに代入
                     db.query(UserModel).filter(UserModel.id == session.user_id).first()
                 )
+                # 二度手間で入ってきたユーザーの確認をしている
+                # SessionModelテーブルにはデータはあるがUserModelテーブルにはいない
+                # みたいな幽霊データを対策するための処理
+                # joinして1回でもできるちゃできる
+                # 一応二度手間のままにしておく、そのうち直してもいい
+
+                # もしユーザーのidが一致するなら
                 if user:
+                    # ユーザーIDとユーザー名を返す
                     return int(user.id), str(user.username)
+            # セッションが一致しなかったらNoneを返す
             return None
+
+        # 成功しようが失敗しようが、
         finally:
+            # 最終的にデータベースとの通信を閉じる
             db.close()
 
     def delete_session(self, session_hash: str) -> None:
         """セッションを削除する"""
+        # ログアウト時、パスワード変更時、アカウント削除時に呼び出して
+        # 通行許可証を削除する
+        # DBに不要なゴミデータを貯めないため
+
+        # get_dbを呼び出して通信の窓口を一つ確保する
         db = self.get_db()
+        # DBとの通信失敗するかもだけどよろしく
         try:
+            # SessionModelテーブルを調べてみて
+            # 合言葉が一致するデータを消去して
             db.query(SessionModel).filter(
                 SessionModel.session_hash == session_hash
             ).delete()
+            # 変更を確定させる
             db.commit()
         except Exception:
             db.rollback()
