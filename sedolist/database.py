@@ -238,18 +238,28 @@ class DatabaseManager:
             ).delete()
             # 変更を確定させる
             db.commit()
+        # もし、失敗したら
         except Exception:
+            # 変更を破棄して、なかったことにする
             db.rollback()
+        # 成功しようが、失敗しようが、
         finally:
+            # 最終的にデータベースとの通信を閉じる
             db.close()
 
     def cleanup_expired_sessions(self) -> None:
         """期限切れのセッションを削除する"""
+        # get_dbを呼び出して通信の窓口を一つ確保する
         db = self.get_db()
+        # ワンチャンミスるかもだけど落ち着いて
         try:
+            # SessionModelテーブルを調べてみて
+            # 有効期限が切れているセッションを探して削除する
+            # expires>_atが現在時刻より前なら期限切れ
             db.query(SessionModel).filter(
                 SessionModel.expires_at < datetime.now()
             ).delete()
+
             db.commit()
         except Exception:
             pass
