@@ -529,61 +529,106 @@ class DatabaseManager:
     #
     def delete_user_account(self, user_id: int) -> bool:
         """指定されたユーザーのアカウントを削除する"""
+        # get_dbを呼び出して、通信の窓口を一つ確保する
         db = self.get_db()
         try:
+            # usersテーブルを調べて、ユーザーIDが一致する人を探して、消してね
             db.query(UserModel).filter(UserModel.id == user_id).delete()
+            # 変更を確定し、データベースに保存
             db.commit()
+            # 処理が成功したら、Trueを返す
             return True
+        # もし、失敗したら、
         except Exception as e:
+            # エラーメッセージとエラー内容をユーザーに表示
             st.error(f"退会処理エラー: {e}")
+            # Falseを返す
             return False
+        # 成功しようが、失敗しようが、
         finally:
+            # 最終的に、データベースとの通信を閉じる
             db.close()
 
     def update_username(self, user_id: int, new_username: str) -> bool:
         """指定されたユーザーの名前を更新する"""
+        # get_dbを呼び出して、通信の窓口を一つ確保する
         db = self.get_db()
         try:
+            # usersテーブルを調べて、user_idが一致する最初の一人を見つける
             user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            # もし、いたら、
             if user:
+                # DBのユーザーネームを新しいユーザーネームと差し替え
                 user.username = new_username
+                # 変更を確定し、DBに保存
                 db.commit()
+                # 問題なく完了したら、Trueを返す
                 return True
+            # いなかったら、Falseを返す
             return False
+        # もし、失敗したら、
         except Exception as e:
+            # エラーメッセージとエラー内容をユーザーに表示
             st.error(f"更新エラー: {e}")
+            # Falseを返す
             return False
+        # 成功しようが、失敗しようが、
         finally:
+            # 最終的に、DBとの通信を閉じる
             db.close()
 
     def get_user_email(self, user_id: int) -> str:
         """指定されたユーザーのメールアドレスを取得する"""
+        # get_dbを呼び出して、通信の窓口を一つ確保する
         db = self.get_db()
         try:
+            # usersテーブルを調べて、user_idが一致する最初の一人を見つける
             user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            # そのユーザーのメールアドレスを返す
+            # if user:
+            # return user.email
+            # else:
+            # return ""  の短縮した書き方
             return user.email if user else ""
+        # 成功しようが、失敗しようが、
         finally:
+            # 最終的に、DBとの通信を閉じる
             db.close()
 
     def update_email(self, user_id: int, new_email: str) -> tuple[bool, str]:
         """指定されたユーザーのメールアドレスを更新する"""
+        # get_dbを呼び出して、通信の窓口を一つ確保する
         db = self.get_db()
         try:
+            # usersテーブルを調べて、user_idが一致する最初の一人を見つける
             user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            # もし、いたら、
             if user:
+                # DBのメールアドレスを新しいメールアドレスに変更しよう
                 user.email = new_email
+                # 変更を確定し、DBに保存
                 db.commit()
+                # 成功したら、Trueを返して、メッセージを表示
                 return True, "メールアドレスを更新しました。"
+            # いなかったら、Falseを返して、メッセージを表示
             return False, "ユーザーが見つかりませんでした。"
 
+        # 登録しようとしたメールアドレスに重複があったら、
         except IntegrityError:
+            # 変更をなかったことにして、元に戻す
             db.rollback()
+            # Falseを返して、メッセージを表示
             return False, "そのメールアドレスは既に使用されています。"
 
+        # もし、失敗したら、
         except Exception as e:
+            # なかったことにして、元に戻す
             db.rollback()
+            # Falseを返して、エラーメッセージとエラー内容を表示
             return False, f"更新エラー: {e}"
+        # 成功しようが、失敗しようが、
         finally:
+            # 最終的に、DBとの通信を閉じる
             db.close()
 
 
@@ -594,3 +639,6 @@ class DatabaseManager:
 def get_db():
     """アプリ全体で一つだけのDatabaseManagerインスタンスを返す"""
     return DatabaseManager()
+    # 最初にDBとの接続を作って、それを使いまわす
+    # Streamlitはボタンを押す度コードが実行されて繋ぎなおしてしまうから
+    # これをしないと逐一DBとの接続を作ってパンクする
