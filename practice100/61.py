@@ -1,3 +1,7 @@
 text = "あかさたな-はまやらわ"
-s = set(text)
-print(s)
+s = list(text)
+
+for t in s:
+    if t == "-":
+        break
+    print(t)
