@@ -24,5 +24,6 @@ class Deck:
 
 deck = Deck()
 deck.shuffle()
-for card in deck.cards:
+for _ in range(5):
+    card = deck.draw_card()
     print(f"{card.suit}{card.number}")

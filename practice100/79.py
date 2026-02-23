@@ -6,9 +6,6 @@ class Card:
         self.suit = suit
         self.number = number
 
-    marks = ["heart", "diya", "spade", "club"]
-    numbers = list(range(1, 14))
-
 
 class Deck:
     def __init__(self):
